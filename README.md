@@ -1,0 +1,1 @@
+# obsidian-note-share-server
