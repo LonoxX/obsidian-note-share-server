@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Note Share</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>    <button class="theme-toggle" id="themeToggle">🌙 Dark</button>
+
+    <div id="loading" class="loading">
+        <div class="loading-spinner">🔒</div>
+        <p>Notiz wird entschlüsselt...</p>
+    </div>
+
+    <div id="error" class="error-page" style="display: none;">
+        <h1>❌ Fehler</h1>
+        <p id="errorMessage"></p>
+    </div>
+
+    <div id="passwordPrompt" class="password-prompt" style="display: none;">
+        <div class="password-form">
+            <h2>🔐 Passwort erforderlich</h2>
+            <p>Diese Notiz ist passwortgeschützt. Bitte geben Sie das Passwort ein:</p>
+            <input type="password" id="passwordInput" placeholder="Passwort eingeben..." class="password-input">
+            <button id="submitPassword" class="btn btn-primary">Entschlüsseln</button>
+        </div>
+    </div>
+
+    <div id="content" class="note-content" style="display: none;">
+        <!-- Note content will be inserted here -->
+    </div>
+
+    <footer class="copyright">
+        <p>&copy; 2025 Secure Note Share Plugin</p>
+    </footer><script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <script>
+        // Template-Variablen für Frontend
+        window.noteId = '{{NOTE_ID}}';
+        window.noteHasPassword = '{{HAS_PASSWORD}}' === 'true';
+    </script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
