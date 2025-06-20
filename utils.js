@@ -1,23 +1,14 @@
 const fs = require('fs-extra');
 const path = require('path');
 
-// Get storage path from environment variables
 const getStoragePath = () => process.env.STORAGE_PATH || './storage';
 
-/**
- * Generiert den Dateipfad für eine Notiz
- */
 const getNotePath = (id) => path.join(getStoragePath(), `${id}.json`);
 
-/**
- * Speichert eine verschlüsselte Notiz
- */
 async function saveNote(id, noteData) {
   try {
     const storagePath = getStoragePath();
     await fs.ensureDir(storagePath);
-
-    // Sicherstellen, dass expiresAt ein gültiges Datum ist
     if (noteData.expiresAt) {
       const expiresDate = new Date(noteData.expiresAt);
       if (isNaN(expiresDate.getTime())) {
@@ -35,9 +26,6 @@ async function saveNote(id, noteData) {
   }
 }
 
-/**
- * Lädt eine verschlüsselte Notiz
- */
 async function loadNote(id, incrementViewCount = false) {
   try {
     const notePath = getNotePath(id);
@@ -50,7 +38,6 @@ async function loadNote(id, incrementViewCount = false) {
     const now = new Date();
     const expiresAt = new Date(data.expiresAt);
 
-    // Prüfen ob abgelaufen
     if (now > expiresAt) {
       await fs.remove(notePath);
       console.log(`🗑️ Expired note removed: ${id}`);
@@ -64,12 +51,10 @@ async function loadNote(id, incrementViewCount = false) {
       return null;
     }
 
-    // View count erhöhen falls gewünscht
     if (incrementViewCount) {
       data.viewCount++;
       await fs.outputJson(notePath, data, { spaces: 2 });
 
-      // Bei One-time view nach Increment löschen
       if (data.oneTimeView) {
         await fs.remove(notePath);
         console.log(`🗑️ One-time note removed after increment: ${id}`);
@@ -81,9 +66,6 @@ async function loadNote(id, incrementViewCount = false) {
   }
 }
 
-/**
- * Löscht eine Notiz (für Revoke)
- */
 async function deleteNote(id) {
   try {
     const notePath = getNotePath(id);
@@ -101,9 +83,6 @@ async function deleteNote(id) {
   }
 }
 
-/**
- * Bereinigt abgelaufene Notizen
- */
 async function cleanupExpiredNotes() {
   try {
     const storagePath = getStoragePath();
@@ -127,7 +106,6 @@ async function cleanupExpiredNotes() {
           cleanedCount++;
         }
       } catch (error) {
-        // Defekte Datei löschen
         console.log(`🗑️ Removing malformed file: ${file}`);
         await fs.remove(fullPath);
         cleanedCount++;
@@ -145,9 +123,6 @@ async function cleanupExpiredNotes() {
   }
 }
 
-/**
- * Statistiken über gespeicherte Notizen
- */
 async function getStorageStats() {
   try {
     const storagePath = getStoragePath();

@@ -8,14 +8,10 @@ const fs = require('fs').promises;
 router.get('/share/:id', async (req, res) => {
     try {
         const { id } = req.params;
-
-        // Template laden
         const templatePath = path.join(__dirname, '..', 'views', 'share.html');
         let html = await fs.readFile(templatePath, 'utf8');
-
-        // Template-Variablen ersetzen
         html = html.replace('{{NOTE_ID}}', id);
-        html = html.replace('{{HAS_PASSWORD}}', 'false'); // Wird vom Frontend dynamisch geladen
+        html = html.replace('{{HAS_PASSWORD}}', 'false');
 
         res.send(html);
     } catch (error) {

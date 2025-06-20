@@ -4,18 +4,34 @@ const router = express.Router();
 const { saveNote, loadNote, deleteNote, getStorageStats } = require('../utils');
 const { v4: uuidv4 } = require('uuid');
 
-// Environment variable getters with defaults
 const getDefaultTtlMinutes = () => parseInt(process.env.DEFAULT_TTL_MINUTES) || 60;
 const getMaxTtlMinutes = () => parseInt(process.env.MAX_TTL_MINUTES) || 10080; // 7 days
+const getMaxSize = () => {
+    const envValue = process.env.MAX_CONTENT_SIZE;
+    if (!envValue) return 1024 * 1024; // 1MB default
 
-// Health check endpoint
+    // Parse size strings like "10mb", "1kb", etc.
+    const match = envValue.toLowerCase().match(/^(\d+)(mb|kb|gb|b)?$/);
+    if (!match) return 1024 * 1024; // fallback to 1MB
+
+    const value = parseInt(match[1]);
+    const unit = match[2] || 'b';
+
+    switch (unit) {
+        case 'gb': return value * 1024 * 1024 * 1024;
+        case 'mb': return value * 1024 * 1024;
+        case 'kb': return value * 1024;
+        case 'b':
+        default: return value;
+    }
+};
+
 router.get('/health', async (req, res) => {
     try {
         const stats = await getStorageStats();
         res.json({
             status: 'healthy',
             timestamp: new Date().toISOString(),
-            storage: stats,
             version: require('../package.json').version
         });
     } catch (error) {
@@ -26,21 +42,24 @@ router.get('/health', async (req, res) => {
     }
 });
 
-// Upload endpoint - Verschlüsselte Notiz speichern
+
 router.post('/upload', async (req, res) => {
     try {
         const { encryptedContent, ttlMinutes, oneTimeView, hasPassword } = req.body;
-
-        // Validierung
         if (!encryptedContent || !encryptedContent.data || !encryptedContent.iv || !encryptedContent.tag) {
             return res.status(400).json({
                 error: 'Missing required fields: encryptedContent with data, iv, and tag'
             });
         }
 
-        // TTL validieren
         const requestedTtl = ttlMinutes || getDefaultTtlMinutes();
-        if (requestedTtl > getMaxTtlMinutes()) {
+        let isUnlimited = false;
+        let finalTtl = requestedTtl;
+
+        if (ttlMinutes === -1) {
+            isUnlimited = true;
+            finalTtl = -1;
+        } else if (requestedTtl > getMaxTtlMinutes()) {
             return res.status(400).json({
                 error: `TTL cannot exceed ${getMaxTtlMinutes()} minutes`
             });
@@ -48,17 +67,23 @@ router.post('/upload', async (req, res) => {
 
         // Content-Größe prüfen
         const contentString = JSON.stringify(encryptedContent);
-        if (contentString.length > 1024 * 1024) { // 1MB limit
+        const contentSize = contentString.length;
+
+
+        if (contentSize > getMaxSize()) {
             return res.status(400).json({
                 error: 'Content too large'
             });
         }
 
-        // Eindeutige ID generieren
         const id = uuidv4();
 
-        // Ablaufzeit berechnen
-        const expiresAt = new Date(Date.now() + requestedTtl * 60 * 1000);
+        let expiresAt;
+        if (isUnlimited) {
+            expiresAt = new Date('2099-12-31T23:59:59.999Z');
+        } else {
+            expiresAt = new Date(Date.now() + finalTtl * 60 * 1000);
+        }
 
         // Notiz-Daten strukturieren
         const noteData = {
@@ -71,26 +96,30 @@ router.post('/upload', async (req, res) => {
             viewCount: 0
         };
 
-        // Speichern
         await saveNote(id, noteData);
 
-        console.log(`✅ Note created: ${id} (expires: ${expiresAt.toISOString()})`);
+        const shareUrl = `${req.protocol}://${req.get('host')}/share/${id}`;
 
         res.json({
             id,
-            shareUrl: `${req.protocol}://${req.get('host')}/share/${id}`,
+            shareUrl,
             expiresAt: expiresAt.toISOString(),
             ttlMinutes: requestedTtl
         });
     } catch (error) {
         console.error('❌ Upload error:', error);
+        console.error('❌ Error stack:', error.stack);
+        console.error('❌ Error details:', {
+            name: error.name,
+            message: error.message,
+            code: error.code
+        });
         res.status(500).json({
             error: 'Internal server error'
         });
     }
 });
 
-// Note laden
 router.get('/note/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -101,24 +130,18 @@ router.get('/note/:id', async (req, res) => {
                 error: 'Note not found or expired'
             });
         }
-
-        // View Count erhöhen
         noteData.viewCount = (noteData.viewCount || 0) + 1;
 
-        // Bei One-Time View nach dem ersten Abruf löschen
         if (noteData.oneTimeView && noteData.viewCount > 1) {
             await deleteNote(id);
             return res.status(404).json({
                 error: 'Note was deleted after first view'
             });
         }
-
-        // Notiz aktualisieren (View Count)
         await saveNote(id, noteData);
 
         console.log(`📖 Note accessed: ${id} (views: ${noteData.viewCount})`);
 
-        // Nur Metadaten zurückgeben, nicht den verschlüsselten Inhalt
         res.json({
             id: noteData.id,
             encryptedContent: noteData.encryptedContent,
@@ -135,7 +158,6 @@ router.get('/note/:id', async (req, res) => {
     }
 });
 
-// Note manuell löschen
 router.delete('/note/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -161,7 +183,6 @@ router.delete('/note/:id', async (req, res) => {
     }
 });
 
-// Freigabe widerrufen - Notiz löschen
 router.delete('/revoke/:id', async (req, res) => {
     try {
         const { id } = req.params;
