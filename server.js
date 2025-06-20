@@ -30,7 +30,6 @@ const rateLimitMiddleware = require('./middleware/rateLimit');
 const loggingMiddleware = require('./middleware/logging');
 const apiRoutes = require('./routes/api');
 const shareRoutes = require('./routes/share');
-const debugRoutes = require('./routes/debug');
 
 const app = express();
 app.set('trust proxy', getTrustProxy());
@@ -50,7 +49,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', apiRoutes);
 app.use('/', shareRoutes);
-app.use('/', debugRoutes);
 
 app.use((req, res) => {
     res.status(404).json({ error: 'Endpoint not found' });
