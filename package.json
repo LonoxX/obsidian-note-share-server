@@ -1,6 +1,6 @@
 {
   "name": "obsidian-secure-note-share-server",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Secure backend server for Obsidian Note Share Plugin with Zero-Knowledge encryption",
   "main": "server.js",
   "scripts": {
