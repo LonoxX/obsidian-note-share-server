@@ -18,7 +18,7 @@
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
-    "cron": "^4.3.2",
+    "cron": "^4.3.3",
     "crypto-js": "^4.2.0",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
