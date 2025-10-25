@@ -2,7 +2,6 @@
 const express = require('express');
 const router = express.Router();
 const { saveNote, loadNote, deleteNote, getStorageStats } = require('../utils');
-const { v4: uuidv4 } = require('uuid');
 
 const getDefaultTtlMinutes = () => parseInt(process.env.DEFAULT_TTL_MINUTES) || 60;
 const getMaxTtlMinutes = () => parseInt(process.env.MAX_TTL_MINUTES) || 10080; // 7 days
@@ -76,6 +75,7 @@ router.post('/upload', async (req, res) => {
             });
         }
 
+        const { v4: uuidv4 } = await import('uuid');
         const id = uuidv4();
 
         let expiresAt;
